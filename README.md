@@ -1,56 +1,70 @@
 # ditto
 
-A documentation synchronization skill for AI coding agents. Before a commit or push, it checks whether the documentation describes the code being shipped and updates any inaccurate or missing details.
+A documentation review skill for Codex, Claude Code, and other coding agents. Before committing, pushing, or publishing repository changes through an API, follow [SKILL.md](SKILL.md) to keep documentation consistent with the code being shipped.
 
-## Repository contents
+## Contents
 
 | File | Purpose |
 | --- | --- |
-| [SKILL.md](SKILL.md) | The documentation review checklist, commit/push workflow, and verification rules. |
-| README.md | Overview, usage, and integration requirements. |
+| [SKILL.md](SKILL.md) | Portable review workflow and optional gate integration. |
+| README.md | Usage and compatibility notes. |
 
-## Workflow
+## Use with your agent
 
-1. Scope the changes: staged and unstaged changes plus untracked files for a commit; outgoing commits and their diff for a push.
-2. Inventory relevant documentation, including the README, project instructions, changelogs, setup examples, and CLI help.
-3. Identify statements made inaccurate or incomplete by the changes.
-4. Update documentation minimally, in English, based on actual behavior.
-5. When the hook is installed, stamp the completed review after the last edit and retry the commit or push.
-6. After a push, verify branch synchronization and confirm documentation matches the remote.
+Make the complete `SKILL.md` available through the host's supported skill mechanism, or explicitly ask the agent to read it. Consult your host's documentation for skill discovery and installation; this repository does not provide an installer.
 
-Documentation-only or cosmetic changes can be marked `no doc impact`; the hooked workflow still requires a stamp.
+| Environment | How to apply ditto | Enforcement |
+| --- | --- | --- |
+| Codex | Load it as a skill where supported, or reference it from project instructions the agent reads. | Agent follows the checklist; no blocking hook included. |
+| Claude Code | Load it through the host's supported skill mechanism or project instructions. | Optional existing Claude hook; implementation not included. |
+| Other coding agents | Supply the Markdown as a skill, project rule, or explicit task instruction supported by the host. | Depends on the host integration. |
+| Chat/API without repository tools | Provide code diffs and relevant docs for review. | Review only; cannot verify or publish the remote without tools. |
+| GitHub connector/API | Read the current files, review proposed changes, write within authorization, then fetch the result to verify. | Version checks depend on the tools available. |
 
-See [SKILL.md](SKILL.md) for the full procedure and exceptions.
+A model does not install or enforce this workflow by itself. Its surrounding agent software must load the instructions and provide the necessary repository tools.
 
-## Usage
+Example instruction for a project rule file:
 
-Make `SKILL.md` available to your agent through its supported skill mechanism, or explicitly ask it to follow the checklist before committing or pushing.
+```text
+Before committing, pushing, or publishing repository changes, read and follow
+<path-to-ditto>/SKILL.md. Keep documentation aligned with the changes.
+Preserve unrelated edits and report anything you could not verify.
+```
+
+Replace the placeholder with the actual path and place this instruction in a file your host is configured to read.
 
 Example prompts:
 
 - "Use ditto before committing these changes."
-- "Are the docs up to date?"
-- "Sync the docs before pushing."
+- "Check whether the docs match this diff."
+- "Sync the docs and push the authorized changes."
 
-## Hook integration and prerequisites
+## Workflow
 
-The skill describes a Claude PreToolUse hook at `~/.claude/hooks/ditto.py` that blocks `git commit` and `git push` until a documentation review is stamped.
+1. Review the exact changes being committed or published.
+2. Inspect relevant project and agent documentation.
+3. Correct inaccuracies supported by the changes.
+4. Include documentation with the intended changes.
+5. Complete an existing review gate if configured.
+6. Verify the committed or remote files and report any limits.
 
-**The hook implementation is not included in this repository.** The skill file alone does not install a hook, enforce blocking, or provide the stamp command. Without that separate integration, the checklist can be followed manually.
+The checklist supports staged changes, outgoing commits, first pushes, read-only reviews, and API writes. It avoids assuming a default branch, Claude-specific paths, or shell availability.
 
-With the hook installed, the documented stamp commands are:
+## Optional Claude hook
+
+The original skill references a Claude PreToolUse hook at `~/.claude/hooks/ditto.py`.
+
+**That hook is not included.** Neither this Markdown skill nor the README installs automatic command blocking. Only use the following command when that integration already exists:
 
 ```bash
 python3 ~/.claude/hooks/ditto.py stamp --mode commit --repo /path/to/repository
 python3 ~/.claude/hooks/ditto.py stamp --mode push --repo /path/to/repository
 ```
 
-The workflow uses Git, Python 3 for the hook, and GitHub CLI (`gh`) for checking GitHub repository metadata. Upstream comparison requires an upstream branch or the fallback described in the skill.
+Codex and other hosts can follow the checklist without that script. Automatic enforcement requires a separate integration appropriate to the host.
 
-## Review rules
+## Requirements and limits
 
-- Document only behavior supported by the changes.
-- Stage changed documentation by explicit path so it ships with the relevant code.
-- Never stage secrets.
-- Do not bypass the hook unless the user explicitly requests it.
-- Report contradictory GitHub repository metadata and ask before changing it.
+Local Git workflows require Git. The optional Claude stamp script requires Python 3. GitHub metadata can be checked using an available connector or GitHub CLI.
+
+Instruction compatibility does not establish tested runtime integration with every agent. No hook, installer, or automatic enforcement implementation is supplied in this repository.
